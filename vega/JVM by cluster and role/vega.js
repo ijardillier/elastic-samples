@@ -42,7 +42,6 @@
         "%context%": true,
         "%timefield%": "@timestamp",
         "index": ".monitoring-es-*",
-        "filter_path": "-aggregations.cluster.buckets.role.buckets.node",
         "query": {
           "bool": {
             "filter": [
