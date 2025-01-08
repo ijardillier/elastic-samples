@@ -1,0 +1,53 @@
+POST /.monitoring-es-*/_search?filter_path=aggregations,-**.doc_count,-**.doc_count_error_upper_bound,-**.sum_other_doc_count,-**.node
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "term": {
+            "event.dataset": "elasticsearch.node.stats"
+          }
+        }
+      ]
+    }
+  }, 
+  "aggs": {
+    "cluster": {
+      "terms": {
+        "field": "cluster_uuid",
+        "size": 10
+      },
+      "aggs": {
+        "role": {
+          "terms": { 
+            "field": "elasticsearch.node.roles",
+            "include": "data_.*",
+            "exclude": "data_content",
+            "min_doc_count": 0
+          },
+          "aggs": {
+            "node": {
+              "terms": {
+                "field": "elasticsearch.node.name",
+                "size": 10
+              },
+              "aggs": {
+                "max_jvm": {
+                  "max": {
+                    "field": "elasticsearch.node.stats.jvm.mem.heap.max.bytes"
+                  }
+                }
+              }
+            },
+            "sum_jvm": {
+              "sum_bucket": {
+                "buckets_path": "node>max_jvm" 
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
