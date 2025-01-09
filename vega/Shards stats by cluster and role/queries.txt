@@ -1,0 +1,71 @@
+POST /.monitoring-es-*/_search?filter_path=-aggregations.cluster.buckets.node.buckets.index
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "term": {
+            "event.dataset": "elasticsearch.shard"
+          }
+        }
+      ]
+    }
+  }, 
+  "aggs": {
+    "cluster": {
+      "terms": {
+        "field": "cluster_uuid",
+        "size": 10
+      },
+      "aggs": {
+        "node": {
+          "terms": {
+            "field": "elasticsearch.node.name",
+            "size": 10
+          },
+          "aggs": {
+            "index": {
+              "terms": {
+                "field": "elasticsearch.index.name",
+                "size": 100
+              },
+              "aggs": {
+                "shard": {
+                  "terms": {
+                    "field": "elasticsearch.shard.primary"
+                  },
+                  "aggs": {
+                    "shard_number": {
+                      "max": {
+                        "field": "elasticsearch.shard.number"
+                      }
+                    },
+                    "shard_count_per_shard_type": {
+                      "bucket_script": {
+                        "buckets_path": {
+                          "shardNumber": "shard_number"
+                        },
+                        "script": "params.shardNumber + 1"
+                      }
+                    }
+                  }
+                },
+                "shard_count_per_index": {
+                  "sum_bucket": {
+                    "buckets_path": "shard>shard_count_per_shard_type" 
+                  }
+                }
+              }
+            },
+            "shard_count_per_node": {
+              "sum_bucket": {
+                "buckets_path": "index>shard_count_per_index" 
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
